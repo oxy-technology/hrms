@@ -145,7 +145,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 		self.update_claimed_amount_in_employee_advance()
 
 	def on_update_after_submit(self):
-		if self.check_if_fields_updated([], {"taxes": ("account_head")}):
+		if self.check_if_fields_updated([], {"taxes": ("account_head",), "expenses": ()}):
 			validate_docs_for_voucher_types(["Expense Claim"])
 			self.repost_accounting_entries()
 
@@ -352,6 +352,7 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 	def validate_advances(self):
 		self.total_advance_amount = 0
+		precision = self.precision("total_advance_amount")
 
 		for d in self.get("advances"):
 			self.round_floats_in(d)
@@ -367,8 +368,8 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 			d.advance_paid = ref_doc.paid_amount
 			d.unclaimed_amount = flt(ref_doc.paid_amount) - flt(ref_doc.claimed_amount)
 
-			if d.allocated_amount and flt(d.allocated_amount) > (
-				flt(d.unclaimed_amount) - flt(d.return_amount)
+			if d.allocated_amount and flt(d.allocated_amount) > flt(
+				flt(d.unclaimed_amount) - flt(d.return_amount), precision
 			):
 				frappe.throw(
 					_("Row {0}# Allocated amount {1} cannot be greater than unclaimed amount {2}").format(
@@ -380,7 +381,6 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 		if self.total_advance_amount:
 			self.round_floats_in(self, ["total_advance_amount"])
-			precision = self.precision("total_advance_amount")
 			amount_with_taxes = flt(
 				(flt(self.total_sanctioned_amount, precision) + flt(self.total_taxes_and_charges, precision)),
 				precision,

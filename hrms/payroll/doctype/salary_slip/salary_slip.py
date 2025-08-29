@@ -761,16 +761,15 @@ class SalarySlip(TransactionBase):
 				break
 
 		if not row_exists:
-			wages_row = {
-				"salary_component": salary_component,
-				"abbr": frappe.db.get_value(
-					"Salary Component", salary_component, "salary_component_abbr", cache=True
-				),
-				"amount": self.hour_rate * self.total_working_hours,
-				"default_amount": 0.0,
-				"additional_amount": 0.0,
-			}
-			doc.append("earnings", wages_row)
+			wages_row = get_salary_component_data(salary_component)
+			wages_amount = self.hour_rate * self.total_working_hours
+
+			self.update_component_row(
+				wages_row,
+				wages_amount,
+				"earnings",
+				default_amount=wages_amount,
+			)
 
 	def set_salary_structure_assignment(self):
 		self._salary_structure_assignment = frappe.db.get_value(
@@ -1464,6 +1463,7 @@ class SalarySlip(TransactionBase):
 				"salary_component",
 				"abbr",
 				"do_not_include_in_total",
+				"do_not_include_in_accounts",
 				"is_tax_applicable",
 				"is_flexible_benefit",
 				"variable_based_on_taxable_salary",
